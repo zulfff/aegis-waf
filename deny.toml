@@ -1,6 +1,4 @@
 [advisories]
-db-path = "~/.cargo/advisory-db"
-db-urls = ["https://github.com/rustsec/advisory-db"]
 ignore = [
     { id = "RUSTSEC-2024-0437" },
     { id = "RUSTSEC-2025-0009" },
@@ -19,7 +17,6 @@ highlight = "all"
 skip = []
 
 [licenses]
-unlicensed = "deny"
 allow = [
     "MIT",
     "Apache-2.0",
@@ -35,7 +32,6 @@ allow = [
     "BSL-1.0",
     "WTFPL",
 ]
-copyleft = "warn"
 confidence-threshold = 0.9
 
 [sources]
