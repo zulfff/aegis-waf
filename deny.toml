@@ -30,13 +30,9 @@ allow = [
     "Unicode-DFS-2016",
     "Zlib",
     "0BSD",
-    "MIT OR Apache-2.0",
-    "MIT AND (MIT OR Apache-2.0)",
-    "ISC AND MIT",
     "OpenSSL",
     "CC0-1.0",
     "BSL-1.0",
-    "Unicode-3.0",
     "WTFPL",
 ]
 copyleft = "warn"
