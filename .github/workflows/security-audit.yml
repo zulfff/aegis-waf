@@ -8,12 +8,14 @@ on:
     paths:
       - "Cargo.toml"
       - "Cargo.lock"
+      - "deny.toml"
       - ".github/workflows/security-audit.yml"
   pull_request:
     branches: [main]
     paths:
       - "Cargo.toml"
       - "Cargo.lock"
+      - "deny.toml"
       - ".github/workflows/security-audit.yml"
   workflow_dispatch:
 
