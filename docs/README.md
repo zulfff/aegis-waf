@@ -1,7 +1,5 @@
 # Aegis WAF
 
-[![CI](https://github.com/aegis-waf/aegis-waf/actions/workflows/test.yml/badge.svg)](https://github.com/aegis-waf/aegis-waf/actions/workflows/test.yml)
-[![Security Audit](https://github.com/aegis-waf/aegis-waf/actions/workflows/security-audit.yml/badge.svg)](https://github.com/aegis-waf/aegis-waf/actions/workflows/security-audit.yml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
 A high-performance, memory-safe Web Application Firewall written in Rust.
