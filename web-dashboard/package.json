@@ -1,0 +1,14 @@
+{
+  "name": "aegis-waf-dashboard",
+  "version": "1.0.0",
+  "description": "Aegis WAF Security Dashboard - Real-time monitoring for web application firewall",
+  "private": true,
+  "scripts": {
+    "dev": "python3 -m http.server 8080",
+    "build": "mkdir -p dist && cp index.html dist/",
+    "serve": "python3 -m http.server 8080 --directory dist",
+    "lint": "echo 'No linter configured for static dashboard'"
+  },
+  "keywords": ["waf", "security", "dashboard", "aegis"],
+  "license": "UNLICENSED"
+}

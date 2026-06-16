@@ -1,0 +1,488 @@
+owasp_top_10_2021:
+  version: "2021"
+  description: "OWASP Top 10 Web Application Security Risks - Aegis WAF Compliance Test Cases"
+  generated: "2024-01-01"
+
+  categories:
+
+    - id: A01
+      name: "Broken Access Control"
+      description: "Access control failures allowing unauthorized access to functionality or data"
+      test_cases:
+        - name: "Forced browsing to admin panel"
+          request:
+            method: GET
+            path: "/admin"
+            headers:
+              Host: "example.com"
+          expected_detection: true
+          detection_module: "response_engine"
+          severity: "High"
+
+        - name: "Path traversal to config file"
+          request:
+            method: GET
+            path: "/files?path=../../../../etc/aegis/config.toml"
+            headers:
+              Host: "example.com"
+          expected_detection: true
+          detection_module: "dpi_engine"
+          attack_category: "path_traversal"
+          severity: "Critical"
+
+        - name: "IDOR - direct object reference"
+          request:
+            method: GET
+            path: "/api/users/1"
+            headers:
+              Host: "example.com"
+              Authorization: "Bearer valid_token"
+          body: ""
+          expected_detection: false
+          note: "Valid access with token - should not be blocked"
+
+        - name: "Missing authorization header"
+          request:
+            method: GET
+            path: "/api/admin/users"
+            headers:
+              Host: "example.com"
+          expected_detection: false
+          note: "Authorization check happens at application layer"
+
+    - id: A02
+      name: "Cryptographic Failures"
+      description: "Failures related to cryptography leading to sensitive data exposure"
+      test_cases:
+        - name: "Request over HTTP (no TLS)"
+          request:
+            method: GET
+            path: "/login"
+            headers:
+              Host: "example.com"
+          protocol: "HTTP/1.0"
+          expected_detection: true
+          detection_module: "protocol_validator"
+          severity: "Medium"
+          note: "Aegis should reject or redirect HTTP to HTTPS"
+
+        - name: "Request with HTTPS (TLS)"
+          request:
+            method: POST
+            path: "/login"
+            headers:
+              Host: "example.com"
+              Content-Type: "application/x-www-form-urlencoded"
+          protocol: "HTTP/1.1"
+          expected_detection: false
+
+        - name: "Weak TLS version (TLS 1.0)"
+          request:
+            method: GET
+            path: "/"
+            headers:
+              Host: "example.com"
+          tls_version: "1.0"
+          expected_detection: true
+          detection_module: "tls_handler"
+          severity: "Medium"
+
+    - id: A03
+      name: "Injection"
+      description: "Injection flaws such as SQL, NoSQL, OS command, and LDAP injection"
+      test_cases:
+        - name: "SQL Injection - basic tautology"
+          request:
+            method: POST
+            path: "/login"
+            headers:
+              Host: "example.com"
+              Content-Type: "application/x-www-form-urlencoded"
+          body: "username=admin' OR '1'='1&password=anything"
+          expected_detection: true
+          detection_module: "dpi_engine"
+          attack_category: "sql_injection"
+          pattern_id: 1008
+          severity: "Critical"
+
+        - name: "SQL Injection - UNION SELECT"
+          request:
+            method: GET
+            path: "/products?id=1 UNION SELECT username, password FROM users"
+            headers:
+              Host: "example.com"
+          expected_detection: true
+          detection_module: "dpi_engine"
+          attack_category: "sql_injection"
+          pattern_id: 1001
+          severity: "Critical"
+
+        - name: "SQL Injection - time-based SLEEP"
+          request:
+            method: GET
+            path: "/search?q=test' AND SLEEP(5) AND '1'='1"
+            headers:
+              Host: "example.com"
+          expected_detection: true
+          detection_module: "dpi_engine"
+          attack_category: "sql_injection"
+          pattern_id: 1004
+          severity: "Critical"
+
+        - name: "SQL Injection - obfuscated with comments"
+          request:
+            method: POST
+            path: "/api/data"
+            headers:
+              Host: "example.com"
+              Content-Type: "application/json"
+          body: "{\"query\": \"1 /*!UNION*/ /*!SELECT*/ * FROM users\"}"
+          expected_detection: true
+          detection_module: "dpi_engine"
+          attack_category: "sql_injection"
+          pattern_id: 1009
+          severity: "Critical"
+
+        - name: "Command Injection - pipe"
+          request:
+            method: GET
+            path: "/ping?host=127.0.0.1 | cat /etc/passwd"
+            headers:
+              Host: "example.com"
+          expected_detection: true
+          detection_module: "dpi_engine"
+          attack_category: "command_injection"
+          pattern_id: 4001
+          severity: "Critical"
+
+        - name: "Command Injection - subshell $(whoami)"
+          request:
+            method: GET
+            path: "/exec?cmd=$(whoami)"
+            headers:
+              Host: "example.com"
+          expected_detection: true
+          detection_module: "dpi_engine"
+          attack_category: "command_injection"
+          pattern_id: 4002
+          severity: "Critical"
+
+        - name: "Command Injection - backtick"
+          request:
+            method: POST
+            path: "/cmd"
+            headers:
+              Host: "example.com"
+              Content-Type: "application/x-www-form-urlencoded"
+          body: "cmd=`cat /etc/shadow`"
+          expected_detection: true
+          detection_module: "dpi_engine"
+          attack_category: "command_injection"
+          pattern_id: 4003
+          severity: "Critical"
+
+        - name: "Clean request - no injection"
+          request:
+            method: GET
+            path: "/search?q=normal-text"
+            headers:
+              Host: "example.com"
+          expected_detection: false
+          note: "Legitimate search query should not trigger injection detection"
+
+    - id: A04
+      name: "Insecure Design"
+      description: "Risks related to design and architectural flaws"
+      test_cases:
+        - name: "Excessive rate of requests"
+          request:
+            method: GET
+            path: "/api/data"
+            headers:
+              Host: "example.com"
+          repetitions: 500
+          expected_detection: true
+          detection_module: "rate_limiter"
+          severity: "Medium"
+
+        - name: "Single request within limits"
+          request:
+            method: GET
+            path: "/api/data"
+            headers:
+              Host: "example.com"
+          expected_detection: false
+
+    - id: A05
+      name: "Security Misconfiguration"
+      description: "Missing appropriate security hardening across the application stack"
+      test_cases:
+        - name: "Missing security headers in response"
+          request:
+            method: GET
+            path: "/"
+            headers:
+              Host: "example.com"
+          expected_detection: false
+          check_response_headers:
+            - "X-Content-Type-Options"
+            - "X-Frame-Options"
+            - "X-XSS-Protection"
+            - "Referrer-Policy"
+          severity: "Low"
+          note: "Aegis should add security headers to responses"
+
+        - name: "Verbose error disclosure attempt"
+          request:
+            method: GET
+            path: "/api/trigger-error?debug=true"
+            headers:
+              Host: "example.com"
+          expected_detection: false
+          note: "Error handling is application-level concern"
+
+    - id: A06
+      name: "Vulnerable and Outdated Components"
+      description: "Using components with known vulnerabilities"
+      test_cases:
+        - name: "Known CVE payload in URL"
+          request:
+            method: POST
+            path: "/invoker/JMXInvokerServlet"
+            headers:
+              Host: "example.com"
+              Content-Type: "application/x-www-form-urlencoded"
+          body: ""
+          expected_detection: false
+          note: "CVE-specific detection may require custom DPI patterns"
+
+        - name: "Outdated user-agent indicating vulnerable client"
+          request:
+            method: GET
+            path: "/"
+            headers:
+              Host: "example.com"
+              User-Agent: "Java/1.4.2"
+          expected_detection: false
+          detection_module: "bot_detector"
+          note: "May be flagged as scripted HTTP client"
+
+    - id: A07
+      name: "Identification and Authentication Failures"
+      description: "Failures related to authentication and session management"
+      test_cases:
+        - name: "Brute force login attempt (rapid requests)"
+          request:
+            method: POST
+            path: "/login"
+            headers:
+              Host: "example.com"
+              Content-Type: "application/x-www-form-urlencoded"
+          body: "username=admin&password=guess123"
+          repetitions: 100
+          expected_detection: true
+          detection_module: "rate_limiter"
+          severity: "High"
+
+        - name: "Single login attempt"
+          request:
+            method: POST
+            path: "/login"
+            headers:
+              Host: "example.com"
+              Content-Type: "application/x-www-form-urlencoded"
+          body: "username=user@example.com&password=correct"
+          expected_detection: false
+
+    - id: A08
+      name: "Software and Data Integrity Failures"
+      description: "Failures related to software updates, critical data, and CI/CD pipelines"
+      test_cases:
+        - name: "Serving from unexpected origin"
+          request:
+            method: POST
+            path: "/api/import"
+            headers:
+              Host: "example.com"
+              X-Forwarded-Host: "evil.com"
+              Content-Type: "application/json"
+          body: "{\"url\": \"http://evil.com/malicious.json\"}"
+          expected_detection: true
+          detection_module: "protocol_validator"
+          severity: "Medium"
+          note: "X-Forwarded-Host manipulation should be rejected"
+
+        - name: "SSRF - localhost access"
+          request:
+            method: POST
+            path: "/api/fetch"
+            headers:
+              Host: "example.com"
+              Content-Type: "application/json"
+          body: "{\"url\": \"http://127.0.0.1:8080/admin\"}"
+          expected_detection: true
+          detection_module: "dpi_engine"
+          attack_category: "ssrf"
+          pattern_id: 6001
+          severity: "High"
+
+        - name: "SSRF - metadata endpoint"
+          request:
+            method: POST
+            path: "/api/import"
+            headers:
+              Host: "example.com"
+              Content-Type: "application/json"
+          body: "{\"url\": \"http://169.254.169.254/latest/meta-data/\"}"
+          expected_detection: true
+          detection_module: "dpi_engine"
+          attack_category: "ssrf"
+          pattern_id: 6003
+          severity: "Critical"
+
+    - id: A09
+      name: "Security Logging and Monitoring Failures"
+      description: "Insufficient logging and monitoring allowing prolonged attacks"
+      test_cases:
+        - name: "Suspicious activity not blocked but logged"
+          request:
+            method: GET
+            path: "/api/debug?verbose=true&trace=true"
+            headers:
+              Host: "example.com"
+              User-Agent: "nmap-scripting-engine/7.0"
+          expected_detection: false
+          note: "Should be logged by analytics/logger but may not be blocked"
+
+        - name: "Scanner user-agent"
+          request:
+            method: GET
+            path: "/"
+            headers:
+              Host: "example.com"
+              User-Agent: "zgrab/0.x"
+          expected_detection: true
+          detection_module: "bot_detector"
+          severity: "Medium"
+          note: "Network scanner UA should trigger automation detection"
+
+    - id: A10
+      name: "Server-Side Request Forgery (SSRF)"
+      description: "SSRF flaws allowing attackers to force the server to make requests"
+      test_cases:
+        - name: "SSRF - internal network access (10.x)"
+          request:
+            method: POST
+            path: "/api/proxy"
+            headers:
+              Host: "example.com"
+              Content-Type: "application/json"
+          body: "{\"target\": \"http://10.0.0.1:22\"}"
+          expected_detection: true
+          detection_module: "dpi_engine"
+          attack_category: "ssrf"
+          pattern_id: 6002
+          severity: "High"
+
+        - name: "SSRF - DNS rebinding (nip.io)"
+          request:
+            method: GET
+            path: "/redirect?url=http://127.0.0.1.nip.io/admin"
+            headers:
+              Host: "example.com"
+          expected_detection: true
+          detection_module: "dpi_engine"
+          attack_category: "ssrf"
+          pattern_id: 6006
+          severity: "High"
+
+        - name: "SSRF - file:// protocol"
+          request:
+            method: GET
+            path: "/fetch?url=file:///etc/passwd"
+            headers:
+              Host: "example.com"
+          expected_detection: true
+          detection_module: "dpi_engine"
+          attack_category: "path_traversal"
+          pattern_id: 3006
+          severity: "Critical"
+
+        - name: "XEE - external entity injection"
+          request:
+            method: POST
+            path: "/api/xml"
+            headers:
+              Host: "example.com"
+              Content-Type: "application/xml"
+          body: |
+            <?xml version="1.0" encoding="UTF-8"?>
+            <!DOCTYPE foo [
+              <!ENTITY xxe SYSTEM "file:///etc/passwd">
+            ]>
+            <data>&xxe;</data>
+          expected_detection: true
+          detection_module: "dpi_engine"
+          attack_category: "xxe"
+          pattern_id: 5001
+          severity: "Critical"
+
+  detection_modules:
+    dpi_engine:
+      description: "Deep packet inspection for attack signatures"
+      categories:
+        - sql_injection
+        - xss
+        - path_traversal
+        - command_injection
+        - xxe
+        - ssrf
+    protocol_validator:
+      description: "HTTP protocol compliance and anomaly detection"
+      checks:
+        - invalid_methods
+        - header_validation
+        - content_length_conflicts
+        - slowloris_detection
+        - host_header_validation
+    rate_limiter:
+      description: "Token bucket rate limiting per IP/session/endpoint"
+      checks:
+        - request_rate
+        - burst_detection
+        - graceful_degradation
+    bot_detector:
+      description: "Bot and automation detection"
+      checks:
+        - ai_bot_detection
+        - headless_browser_detection
+        - automation_tool_detection
+        - browser_fingerprint_inconsistency
+    ingress_filter:
+      description: "IP reputation and connection filtering"
+      checks:
+        - blocked_ips
+        - geoip_blocking
+        - connection_limits
+        - syn_flood_detection
+    threat_intel:
+      description: "Threat intelligence feed integration"
+      checks:
+        - ip_reputation
+        - domain_reputation
+        - rule_generation
+    behavioral_analyzer:
+      description: "Traffic baseline and anomaly detection"
+      checks:
+        - statistical_anomalies
+        - temporal_patterns
+        - path_sequence_analysis
+        - device_fingerprinting
+    response_engine:
+      description: "Threat response and escalation"
+      actions:
+        - log
+        - challenge
+        - rate_limit
+        - block
+        - redirect

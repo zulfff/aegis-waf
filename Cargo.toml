@@ -1,0 +1,79 @@
+[package]
+name = "aegis-waf"
+version = "1.0.0"
+edition = "2021"
+rust-version = "1.76"
+authors = ["Security Team"]
+description = "Enterprise WAF DDoS Protection System"
+
+[dependencies]
+tokio = { version = "1.35", features = ["full"] }
+tokio-util = { version = "0.7", features = ["codec"] }
+tokio-stream = "0.1"
+
+hyper = { version = "0.14", features = ["server", "http1", "http2", "tcp", "stream"] }
+http-body-util = "0.1"
+bytes = "1.5"
+
+quinn = "0.10"
+rustls = "0.21"
+rustls-pemfile = "1"
+tokio-rustls = "0.24"
+
+httparse = "1.8"
+http = "0.2"
+url = "2.4"
+
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+toml = "0.8"
+serde_yaml = "0.9"
+
+ring = "0.16"
+zeroize = { version = "1.6", features = ["derive"] }
+sha2 = "0.10"
+hmac = "0.12"
+argon2 = "0.5"
+x509-parser = "0.15"
+
+hashbrown = "0.14"
+smallvec = "1.11"
+indexmap = "2.0"
+
+ndarray = "0.15"
+ndarray-stats = "0.5"
+
+redis = { version = "0.24", features = ["aio", "tokio-comp"] }
+parking_lot = "0.12"
+
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json", "time"] }
+
+prometheus = "0.13"
+lazy_static = "1.4"
+
+clap = { version = "4.4", features = ["derive"] }
+anyhow = "1.0"
+thiserror = "1.0"
+
+chrono = { version = "0.4", features = ["serde"] }
+regex = "1.9"
+once_cell = "1.19"
+
+ipnet = "2.9"
+rand = "0.8"
+uuid = { version = "1.6", features = ["v4", "serde"] }
+csv = "1.3"
+
+libc = "0.2"
+
+[dev-dependencies]
+tokio-test = "0.4"
+mockall = "0.12"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

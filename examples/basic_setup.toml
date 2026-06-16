@@ -1,0 +1,71 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Aegis WAF — Basic Setup Example
+# https://github.com/aegis-waf/aegis-waf
+# ─────────────────────────────────────────────────────────────────────────────
+# Minimal configuration for getting started quickly.
+# Suitable for development, local testing, or low-traffic sites.
+# ─────────────────────────────────────────────────────────────────────────────
+
+[server]
+listen_address = "0.0.0.0"
+listen_port = 8443
+max_connections = 5000
+
+[tls]
+enabled = true
+cert_file = "/etc/aegis-waf/tls/server.crt"
+key_file = "/etc/aegis-waf/tls/server.key"
+min_version = "1.2"
+
+[proxy]
+backend = "http://127.0.0.1:8080"
+connect_timeout = 5
+response_timeout = 30
+health_check_path = "/health"
+health_check_interval = 10
+
+[rate_limit]
+enabled = true
+requests_per_second = 50
+burst = 100
+
+[ddos]
+enabled = true
+max_connections_per_second = 500
+max_concurrent_connections = 200
+block_duration_seconds = 300
+
+[waf]
+enabled = true
+mode = "detect"
+block_sqli = true
+block_xss = true
+block_rce = true
+
+[logging]
+format = "text"
+file = "/var/log/aegis-waf/aegis-waf.log"
+level = "info"
+access_log = true
+access_log_file = "/var/log/aegis-waf/access.log"
+max_log_size_mb = 50
+max_log_backups = 3
+compress_logs = true
+
+[metrics]
+enabled = true
+listen_address = "127.0.0.1"
+listen_port = 9090
+
+[compression]
+enabled = true
+
+[headers]
+hide_server_header = true
+x_frame_options = "DENY"
+x_content_type_options = "nosniff"
+
+[tuning]
+worker_count = 0
+tcp_backlog = 2048
+tcp_nodelay = true

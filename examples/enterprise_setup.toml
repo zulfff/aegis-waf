@@ -1,0 +1,227 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Aegis WAF — Enterprise Setup Example
+# https://github.com/aegis-waf/aegis-waf
+# ─────────────────────────────────────────────────────────────────────────────
+# Full-featured enterprise deployment configuration.
+# Assumes:
+#   - Cluster of WAF nodes behind a load balancer (or anycast)
+#   - Shared Redis for state synchronization
+#   - Prometheus + Grafana for monitoring
+#   - ELK/Loki for centralized logging
+#   - PagerDuty/Slack for alerting
+#   - OWASP Core Rule Set with high paranoia
+#   - TLS termination with Let's Encrypt or managed certs
+# ─────────────────────────────────────────────────────────────────────────────
+
+[server]
+listen_address = "0.0.0.0"
+listen_port = 443
+max_connections = 100000
+read_timeout = 10
+write_timeout = 20
+max_body_size = 26214400          # 25 MB
+max_header_count = 100
+max_header_size = 16384
+keep_alive_timeout = 15
+http2_enabled = true
+
+[tls]
+enabled = true
+cert_file = "/etc/aegis-waf/tls/server.crt"
+key_file = "/etc/aegis-waf/tls/server.key"
+min_version = "1.2"
+max_version = "1.3"
+cipher_suites = [
+    "TLS_AES_256_GCM_SHA384",
+    "TLS_AES_128_GCM_SHA256",
+    "TLS_CHACHA20_POLY1305_SHA256",
+]
+hsts_max_age = 63072000             # 2 years
+hsts_include_subdomains = true
+
+[proxy]
+backend = "http://127.0.0.1:8080"
+backends = [
+    "http://192.168.1.10:8080",
+    "http://192.168.1.11:8080",
+    "http://192.168.1.12:8080",
+    "http://192.168.1.13:8080",
+]
+balancing_strategy = "least_conn"
+connect_timeout = 2
+response_timeout = 30
+max_idle_conns = 1000
+retry_attempts = 1
+retry_backoff_ms = 50
+health_check_path = "/health"
+health_check_interval = 3
+health_check_failures = 2
+trust_upstream_proxies = true
+
+[rate_limit]
+enabled = true
+requests_per_second = 200
+burst = 400
+window_seconds = 1
+reject_code = 429
+reject_body = '{"error":"rate_limited","message":"Too many requests. Please slow down.","retry_after":30}'
+client_id_header = "X-Forwarded-For"
+whitelist_subnets = [
+    "10.0.0.0/8",
+    "172.16.0.0/12",
+    "192.168.0.0/16",
+    "100.64.0.0/10",
+]
+
+[ddos]
+enabled = true
+max_connections_per_second = 500
+max_concurrent_connections = 500
+connection_burst = 1000
+block_duration_seconds = 1800          # 30 minute blocks
+syn_flood_protection = true
+syn_cookies = true
+syn_backlog = 16384
+challenge_enabled = true
+challenge_difficulty = 4
+challenge_timeout = 4
+
+[ip_filter]
+enabled = true
+blacklist_file = "/etc/aegis-waf/blacklist.txt"
+whitelist_file = "/etc/aegis-waf/whitelist.txt"
+auto_blacklist = true
+auto_blacklist_ttl = 86400             # 24 hours
+auto_blacklist_max = 100000
+blocked_countries = []
+
+[waf]
+enabled = true
+mode = "prevent"
+rules_file = "/etc/aegis-waf/rules.toml"
+owasp_crs_enabled = true
+owasp_paranoia_level = 3               # High paranoia
+anomaly_threshold = 4                  # Lower threshold = stricter
+max_args = 512
+max_arg_name_length = 256
+max_total_arg_length = 65536
+block_sqli = true
+block_xss = true
+block_rce = true
+block_lfi = true
+block_rfi = true
+block_cmd_injection = true
+block_user_agents = true
+block_scanners = true
+block_status_code = 403
+
+[logging]
+format = "json"
+file = "/var/log/aegis-waf/aegis-waf.log"
+level = "warn"
+access_log = true
+access_log_file = "/var/log/aegis-waf/access.log"
+audit_log = true
+audit_log_file = "/var/log/aegis-waf/audit.log"
+syslog_enabled = true
+syslog_facility = "local0"
+max_log_size_mb = 1024
+max_log_backups = 30
+compress_logs = true
+
+[metrics]
+enabled = true
+listen_address = "0.0.0.0"
+listen_port = 9090
+path = "/metrics"
+histogram_enabled = true
+histogram_buckets = [1, 2, 5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000]
+
+[cache]
+enabled = true
+backend = "redis"
+default_ttl = 15
+max_body_cache_size = 262144
+redis_address = "redis-cluster.internal:6379"
+redis_password = "YourRedisPassword"
+redis_db = 1
+redis_pool_size = 100
+cacheable_status_codes = [200, 301, 404]
+cacheable_methods = ["GET", "HEAD"]
+
+[redis]
+address = "redis-cluster.internal:6379"
+password = "YourRedisPassword"
+db = 0
+pool_size = 100
+connect_timeout = 1
+read_timeout = 1
+write_timeout = 1
+key_prefix = "aegis_waf:prod:"
+tls_enabled = true
+
+[bot_protection]
+enabled = true
+block_bad_bots = true
+block_no_user_agent = true
+enforce_robots_txt = false
+browser_integrity_check = true
+
+[compression]
+enabled = true
+gzip_level = 5
+brotli_level = 4
+min_body_size = 256
+compressible_types = [
+    "text/plain",
+    "text/html",
+    "text/css",
+    "text/javascript",
+    "text/xml",
+    "application/json",
+    "application/javascript",
+    "application/xml",
+    "application/rss+xml",
+    "image/svg+xml",
+    "font/woff2",
+]
+
+[headers]
+hide_server_header = true
+hide_powered_by = true
+content_security_policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests"
+x_frame_options = "DENY"
+x_content_type_options = "nosniff"
+referrer_policy = "strict-origin-when-cross-origin"
+permissions_policy = "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
+cross_origin_opener_policy = "same-origin"
+cross_origin_embedder_policy = "require-corp"
+cross_origin_resource_policy = "same-origin"
+
+[error_pages]
+templates_dir = "/usr/share/aegis-waf/error-pages"
+
+[alerting]
+enabled = true
+webhook_url = "https://hooks.slack.com/services/YOUR-TEAM/YOUR-CHANNEL/YOUR-TOKEN-HERE"
+slack_webhook_url = "https://hooks.slack.com/services/YOUR-TEAM/YOUR-CHANNEL/YOUR-TOKEN-HERE"
+min_severity = "warn"
+alert_events = [
+    "ddos_detected",
+    "backend_down",
+    "rate_limit_exceeded",
+    "tls_expiring",
+    "high_error_rate",
+]
+throttle_seconds = 60
+
+[tuning]
+worker_count = 0
+max_events_per_tick = 512
+event_mechanism = "epoll"
+tcp_backlog = 16384
+tcp_nodelay = true
+tcp_quickack = true
+socket_recv_buffer = 262144
+socket_send_buffer = 262144
+reuse_port = true

@@ -1,0 +1,65 @@
+[Unit]
+Description=Aegis WAF DDoS Protection
+Documentation=https://github.com/aegis-waf/aegis-waf
+After=network.target redis.service
+Wants=network.target
+
+[Service]
+Type=notify
+User=aegis-waf
+Group=aegis-waf
+ExecStart=/usr/local/bin/aegis-waf service start
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=aegis-waf
+
+# ── Sandboxing / Hardening ─────────────────────────────────────────────
+
+ProtectSystem=strict
+ProtectHome=yes
+NoNewPrivileges=yes
+PrivateTmp=yes
+PrivateDevices=no
+ProtectControlGroups=yes
+ProtectKernelModules=yes
+ProtectKernelTunables=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX AF_NETLINK
+RestrictNamespaces=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=no
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+RemoveIPC=yes
+SystemCallArchitectures=native
+
+# Read-write paths for data, logs, runtime
+ReadWritePaths=/var/lib/aegis-waf /var/log/aegis-waf /var/run/aegis-waf
+ReadOnlyPaths=/etc/aegis-waf
+
+RuntimeDirectory=aegis-waf
+RuntimeDirectoryMode=0750
+
+# ── Resource Limits ────────────────────────────────────────────────────
+
+LimitNOFILE=65536
+LimitNPROC=4096
+LimitCORE=0
+LimitMEMLOCK=65536
+MemoryHigh=2G
+MemoryMax=4G
+CPUQuota=400%
+
+# ── Watchdog (if the binary supports systemd notify watchdog) ──────────
+
+WatchdogSec=30
+
+# ── Lifecycle ──────────────────────────────────────────────────────────
+
+TimeoutStartSec=60
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,492 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Aegis WAF — Default Configuration
+# https://github.com/aegis-waf/aegis-waf
+# ─────────────────────────────────────────────────────────────────────────────
+# This file contains sensible defaults for development and small deployments.
+# For production, see production.toml.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ── Server ───────────────────────────────────────────────────────────────────
+# Core listener settings for the WAF reverse proxy.
+[server]
+# IP address(es) to bind to. Use "0.0.0.0" for all interfaces.
+listen_address = "0.0.0.0"
+
+# TCP port for incoming HTTPS connections.
+listen_port = 8443
+
+# Maximum number of concurrent connections the server will accept.
+# 0 means no limit.
+max_connections = 10000
+
+# Connection read timeout in seconds.
+read_timeout = 30
+
+# Connection write timeout in seconds.
+write_timeout = 30
+
+# Maximum request body size in bytes (100 MB).
+max_body_size = 104857600
+
+# Maximum number of headers allowed per request.
+max_header_count = 100
+
+# Maximum total size of all headers in bytes.
+max_header_size = 65536
+
+# Keep-alive timeout for idle connections in seconds.
+keep_alive_timeout = 60
+
+# Enable HTTP/2 support (requires TLS).
+http2_enabled = true
+
+# ── TLS ──────────────────────────────────────────────────────────────────────
+# Transport Layer Security settings.
+[tls]
+# Enable TLS termination at the WAF. Required for HTTPS.
+enabled = false
+
+# Path to the TLS certificate file (PEM format).
+cert_file = "/etc/aegis-waf/tls/server.crt"
+
+# Path to the TLS private key file.
+key_file = "/etc/aegis-waf/tls/server.key"
+
+# Minimum TLS protocol version: 1.0, 1.1, 1.2, 1.3
+min_version = "1.2"
+
+# Maximum TLS protocol version: 1.2, 1.3
+max_version = "1.3"
+
+# Allowed cipher suites (empty = platform defaults).
+# Example secure set:
+# cipher_suites = [
+#     "TLS_AES_256_GCM_SHA384",
+#     "TLS_AES_128_GCM_SHA256",
+#     "TLS_CHACHA20_POLY1305_SHA256",
+# ]
+cipher_suites = []
+
+# HSTS header max-age in seconds (0 = disabled).
+hsts_max_age = 0
+
+# Include subdomains in HSTS.
+hsts_include_subdomains = false
+
+# ── Proxy / Backend ──────────────────────────────────────────────────────────
+# Upstream backend server configuration.
+[proxy]
+# Backend server URL. All validated requests are forwarded here.
+backend = "http://127.0.0.1:8080"
+
+# Alternative backends for load balancing / failover.
+# backends = ["http://127.0.0.1:8081", "http://127.0.0.1:8082"]
+
+# Load balancing strategy: "round_robin", "least_conn", "ip_hash", "random"
+balancing_strategy = "round_robin"
+
+# Connection timeout to backend in seconds.
+connect_timeout = 5
+
+# Read timeout when waiting for backend response.
+response_timeout = 60
+
+# Maximum number of idle keep-alive connections to backend.
+max_idle_conns = 100
+
+# Retry failed backend requests (0 = no retries).
+retry_attempts = 2
+
+# Backoff multiplier between retries.
+retry_backoff_ms = 100
+
+# Health check path on backend for active health monitoring.
+health_check_path = "/health"
+
+# Interval between backend health checks in seconds (0 = disabled).
+health_check_interval = 10
+
+# Number of consecutive failures before marking backend as down.
+health_check_failures = 3
+
+# Strip the X-Forwarded-* headers from incoming requests and re-set them.
+trust_upstream_proxies = false
+
+# ── Rate Limiting ────────────────────────────────────────────────────────────
+# Request rate limiting and throttling.
+[rate_limit]
+# Enable rate limiting.
+enabled = true
+
+# Maximum requests per second per client IP.
+requests_per_second = 100
+
+# Maximum burst size (tokens available in the bucket).
+burst = 200
+
+# Time window for the token bucket in seconds.
+window_seconds = 1
+
+# HTTP status code returned when rate limit is exceeded.
+reject_code = 429
+
+# Custom response body for rate-limited requests (empty = default JSON).
+reject_body = ""
+
+# Header to use for client identification (default: remote IP).
+# Use "X-Real-IP" or "X-Forwarded-For" when behind another proxy.
+client_id_header = ""
+
+# IP subnets to exclude from rate limiting (e.g., internal networks).
+# whitelist_subnets = ["10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"]
+whitelist_subnets = []
+
+# ── DDoS Protection ──────────────────────────────────────────────────────────
+# Layer 3/4 and Layer 7 DDoS mitigation features.
+[ddos]
+# Enable DDoS detection and mitigation.
+enabled = true
+
+# Maximum connections per second from a single IP before blocking.
+max_connections_per_second = 1000
+
+# Maximum concurrent connections from a single IP.
+max_concurrent_connections = 500
+
+# Burst allowance for new connections.
+connection_burst = 1500
+
+# Block duration in seconds after a threshold is breached.
+block_duration_seconds = 300
+
+# Enable SYN flood protection (requires kernel support / CAP_NET_ADMIN).
+syn_flood_protection = false
+
+# Enable SYN cookies (Linux only).
+syn_cookies = false
+
+# Maximum pending TCP SYN backlog.
+syn_backlog = 4096
+
+# Enable challenge-response (JavaScript/Proof-of-Work) for suspicious clients.
+challenge_enabled = false
+
+# Challenge difficulty level (1-5, higher = more CPU work for the client).
+challenge_difficulty = 3
+
+# Challenge timeout in seconds.
+challenge_timeout = 5
+
+# ── IP Blacklist / Whitelist ─────────────────────────────────────────────────
+[ip_filter]
+# Enable IP filtering.
+enabled = true
+
+# Path to a file containing blocked IPs/CIDRs (one per line).
+blacklist_file = "/etc/aegis-waf/blacklist.txt"
+
+# Path to a file containing always-allowed IPs/CIDRs (one per line).
+whitelist_file = "/etc/aegis-waf/whitelist.txt"
+
+# Automatically block IPs that trigger DDoS thresholds.
+auto_blacklist = true
+
+# Duration in seconds for auto-blacklisted IPs.
+auto_blacklist_ttl = 3600
+
+# Maximum number of auto-blacklist entries.
+auto_blacklist_max = 10000
+
+# Geo-blocking: list of ISO 3166-1 alpha-2 country codes to block.
+# Requires MaxMind GeoLite2 database.
+# blocked_countries = ["CN", "RU", "KP"]
+blocked_countries = []
+
+# ── WAF Rules (Web Application Firewall) ─────────────────────────────────────
+[waf]
+# Enable WAF rule matching.
+enabled = true
+
+# Rule engine mode: "detect" (log only) or "prevent" (block matching requests).
+mode = "detect"
+
+# Path to custom rule files (one per line in a ruleset TOML file).
+rules_file = "/etc/aegis-waf/rules.toml"
+
+# Enable OWASP Core Rule Set compatible rules (if bundled).
+owasp_crs_enabled = false
+
+# Paranoia level for OWASP CRS: 1 (default) to 4 (paranoid).
+owasp_paranoia_level = 1
+
+# Anomaly score threshold before blocking a request.
+anomaly_threshold = 5
+
+# Maximum number of arguments in a request before flagging.
+max_args = 512
+
+# Maximum argument name length in bytes.
+max_arg_name_length = 512
+
+# Maximum total argument length in bytes.
+max_total_arg_length = 131072
+
+# Block requests that match known malicious patterns.
+block_sqli = true       # SQL injection
+block_xss = true        # Cross-site scripting
+block_rce = true        # Remote code execution
+block_lfi = true        # Local file inclusion
+block_rfi = true        # Remote file inclusion
+block_cmd_injection = true
+block_user_agents = true  # Block known malicious user agents
+block_scanners = true     # Block vulnerability scanner signatures
+
+# Custom block response code.
+block_status_code = 403
+
+# ── Logging ──────────────────────────────────────────────────────────────────
+[logging]
+# Log output format: "json" or "text".
+format = "json"
+
+# Log file path.
+file = "/var/log/aegis-waf/aegis-waf.log"
+
+# Log level: "debug", "info", "warn", "error"
+level = "info"
+
+# Enable access log (one line per request).
+access_log = true
+
+# Access log file path.
+access_log_file = "/var/log/aegis-waf/access.log"
+
+# Enable audit log for security-relevant events.
+audit_log = false
+
+# Audit log file path.
+audit_log_file = "/var/log/aegis-waf/audit.log"
+
+# Log to syslog in addition to file.
+syslog_enabled = false
+
+# Syslog facility.
+syslog_facility = "local0"
+
+# Maximum log file size in MB before rotation.
+max_log_size_mb = 100
+
+# Number of rotated log files to keep.
+max_log_backups = 7
+
+# Compress rotated log files.
+compress_logs = true
+
+# ── Metrics / Observability ─────────────────────────────────────────────────
+[metrics]
+# Enable Prometheus-compatible metrics endpoint.
+enabled = true
+
+# Address to bind the metrics HTTP server.
+listen_address = "127.0.0.1"
+
+# Port for the metrics endpoint.
+listen_port = 9090
+
+# Metrics endpoint path.
+path = "/metrics"
+
+# Collect histogram-style latency metrics (higher cardinality).
+histogram_enabled = false
+
+# Latency histogram buckets in milliseconds.
+# histogram_buckets = [1, 5, 10, 25, 50, 100, 250, 500, 1000, 5000]
+
+# ── Cache ────────────────────────────────────────────────────────────────────
+[cache]
+# Enable response caching.
+enabled = false
+
+# Cache backend: "memory" or "redis".
+backend = "memory"
+
+# Maximum number of entries in the in-memory cache.
+memory_max_entries = 10000
+
+# Maximum memory usage in bytes for the cache (512 MB).
+memory_max_size = 536870912
+
+# Default TTL for cached items in seconds.
+default_ttl = 60
+
+# Maximum response body size to cache in bytes.
+max_body_cache_size = 1048576
+
+# Redis connection (when backend = "redis").
+redis_address = "127.0.0.1:6379"
+redis_password = ""
+redis_db = 0
+redis_pool_size = 10
+
+# Cacheable HTTP status codes.
+cacheable_status_codes = [200, 301, 302, 404]
+
+# Cacheable HTTP methods.
+cacheable_methods = ["GET", "HEAD"]
+
+# ── Redis ────────────────────────────────────────────────────────────────────
+[redis]
+# Redis connection for rate limiting and shared state.
+address = "127.0.0.1:6379"
+password = ""
+db = 0
+
+# Connection pool size.
+pool_size = 10
+
+# Connection timeout in seconds.
+connect_timeout = 3
+read_timeout = 3
+write_timeout = 3
+
+# Prefix for all keys stored by aegis-waf in Redis.
+key_prefix = "aegis_waf:"
+
+# Enable TLS for Redis connections.
+tls_enabled = false
+
+# ── Bot Protection ──────────────────────────────────────────────────────────
+[bot_protection]
+# Enable bot detection.
+enabled = false
+
+# Block known bad bots based on user-agent signature database.
+block_bad_bots = true
+
+# Block requests with no User-Agent header.
+block_no_user_agent = false
+
+# Enforce robots.txt (allow/disallow rules).
+enforce_robots_txt = false
+
+# Require valid browser-like User-Agent and header ordering.
+browser_integrity_check = false
+
+# ── Compression ─────────────────────────────────────────────────────────────
+[compression]
+# Enable response compression (gzip/brotli).
+enabled = true
+
+# Compression level for gzip (1-9).
+gzip_level = 6
+
+# Compression level for brotli (0-11).
+brotli_level = 4
+
+# Minimum response body size in bytes to compress.
+min_body_size = 1024
+
+# MIME types to compress.
+compressible_types = [
+    "text/plain",
+    "text/html",
+    "text/css",
+    "text/javascript",
+    "text/xml",
+    "application/json",
+    "application/javascript",
+    "application/xml",
+    "application/rss+xml",
+    "image/svg+xml",
+]
+
+# ── Headers ─────────────────────────────────────────────────────────────────
+[headers]
+# Add or override response headers.
+
+# Remove headers that reveal internal infrastructure.
+hide_server_header = true
+hide_powered_by = true
+
+# Security headers to add to every response.
+
+# Content-Security-Policy header value (empty = not set).
+content_security_policy = ""
+
+# X-Frame-Options: "DENY", "SAMEORIGIN", or unset.
+x_frame_options = "DENY"
+
+# X-Content-Type-Options
+x_content_type_options = "nosniff"
+
+# Referrer-Policy
+referrer_policy = "strict-origin-when-cross-origin"
+
+# Permissions-Policy
+permissions_policy = ""
+
+# Cross-Origin-* headers
+cross_origin_opener_policy = "same-origin"
+cross_origin_embedder_policy = ""
+cross_origin_resource_policy = "same-origin"
+
+# ── Custom Error Pages ──────────────────────────────────────────────────────
+[error_pages]
+# Custom HTML error pages directory.
+# Files should be named {status_code}.html (e.g., 403.html, 502.html).
+templates_dir = "/usr/share/aegis-waf/error-pages"
+
+# Override default error messages
+# [error_pages.custom]
+# 403 = "Forbidden by Aegis WAF"
+# 429 = "Too Many Requests — slow down!"
+
+# ── Observability / Alerting ─────────────────────────────────────────────────
+[alerting]
+# Enable alerting hooks.
+enabled = false
+
+# Webhook URL for alert notifications.
+webhook_url = ""
+
+# Slack webhook integration.
+slack_webhook_url = ""
+
+# Minimum alert severity: "info", "warn", "critical"
+min_severity = "critical"
+
+# Alert on these events: "ddos_detected", "backend_down", "rate_limit_exceeded", "tls_expiring"
+alert_events = ["ddos_detected", "backend_down"]
+
+# Throttle interval: minimum seconds between repeated alerts of the same type.
+throttle_seconds = 300
+
+# ── Performance Tuning ──────────────────────────────────────────────────────
+[tuning]
+# Number of worker processes/threads to spawn.
+# 0 = auto-detect based on CPU cores.
+worker_count = 0
+
+# Maximum number of events per event loop iteration.
+max_events_per_tick = 256
+
+# Event polling mechanism: "auto", "epoll", "kqueue", "poll"
+event_mechanism = "auto"
+
+# TCP backlog (listen queue size).
+tcp_backlog = 4096
+
+# Enable TCP_NODELAY (disable Nagle's algorithm).
+tcp_nodelay = true
+
+# Enable TCP_QUICKACK (Linux only).
+tcp_quickack = true
+
+# Socket receive buffer size in bytes (0 = system default).
+socket_recv_buffer = 0
+
+# Socket send buffer size in bytes (0 = system default).
+socket_send_buffer = 0
+
+# Enable SO_REUSEPORT for multi-worker setups.
+reuse_port = true

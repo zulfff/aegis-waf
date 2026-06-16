@@ -1,0 +1,64 @@
+version: "3.9"
+
+services:
+  aegis-waf:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: aegis-waf:dev
+    container_name: aegis-waf
+    ports:
+      - "8443:8443"
+      - "9090:9090"
+    volumes:
+      - ./config:/etc/aegis-waf:ro
+      - ./certs:/var/lib/aegis-waf/certs:ro
+      - aegis-logs:/var/log/aegis-waf
+    environment:
+      - AEGIS_CONFIG=/etc/aegis-waf/config.toml
+      - AEGIS_LOG_LEVEL=info
+      - RUST_LOG=info
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - aegis-net
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/aegis-waf", "healthcheck"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  redis:
+    image: redis:7-alpine
+    container_name: aegis-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: >
+      redis-server
+      --appendonly yes
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+    restart: unless-stopped
+    networks:
+      - aegis-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  aegis-logs:
+    driver: local
+  redis-data:
+    driver: local
+
+networks:
+  aegis-net:
+    driver: bridge
+    name: aegis-net
