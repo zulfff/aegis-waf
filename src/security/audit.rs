@@ -448,8 +448,11 @@ mod tests {
     use super::*;
 
     fn test_config() -> AegisConfig {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let id = COUNTER.fetch_add(1, Ordering::Relaxed);
         let mut config = AegisConfig::default();
-        let tmp = std::env::temp_dir().join(format!("aegis-audit-test-{}", std::process::id()));
+        let tmp =
+            std::env::temp_dir().join(format!("aegis-audit-test-{}-{}", std::process::id(), id));
         let rocksdb_path = tmp.join("db");
         let _ = fs::create_dir_all(&rocksdb_path);
         config.storage.rocksdb_path = rocksdb_path.to_string_lossy().to_string();
