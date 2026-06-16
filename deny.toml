@@ -33,6 +33,9 @@ allow = [
     "WTFPL",
 ]
 confidence-threshold = 0.9
+skip = [
+    { name = "ring", version = "0.16.20" },
+]
 
 [sources]
 unknown-registry = "deny"
